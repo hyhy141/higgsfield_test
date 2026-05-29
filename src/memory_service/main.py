@@ -76,7 +76,7 @@ async def guards(request: Request, call_next):
     # pipeline for a payload we're rejecting.
     settings = get_settings()
     cl = request.headers.get("content-length")
-    if cl and cl.isdigit() and int(cl) > settings.max_payload_bytes:
+    if cl and cl.isdigit() and int(cl) > settings.max_turn_bytes:
         try:
             await request.body()
         except Exception:  # noqa: BLE001
@@ -196,6 +196,8 @@ def post_recall(req: RecallRequest) -> RecallResponse:
         query=req.query, gathered=gathered, max_tokens=req.max_tokens,
         threshold=settings.recall_relevance_threshold,
         cosine_threshold=settings.recall_cosine_threshold,
+        turn_gate=settings.recall_gate_turn_cosine,
+        memory_gate=settings.recall_gate_memory_cosine,
     )
     log_event(log, "recall", session_id=req.session_id, user_id=req.user_id,
               n_citations=len(citations), context_chars=len(context))

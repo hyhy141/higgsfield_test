@@ -64,22 +64,33 @@ def _priority(m: dict) -> tuple:
 
 def assemble(
     *, query: str, gathered: dict, max_tokens: int, threshold: float,
-    cosine_threshold: float = 0.52,
+    cosine_threshold: float = 0.61, turn_gate: float = 0.62, memory_gate: float = 0.66,
 ) -> tuple[str, list[dict]]:
     memories: list[dict] = gathered.get("memories", [])
     turns: list[dict] = gathered.get("turns", [])
     recents: list[dict] = gathered.get("recent_turns", [])
 
     def is_relevant(x: dict) -> bool:
-        # Either calibrated signal clearing its bar marks an item relevant.
+        # Inclusion bar (lower): which individual items to SHOW once responding.
         return x.get("score", 0.0) >= threshold or x.get("cosine", 0.0) >= cosine_threshold
 
     has_query = bool(query.strip())
     rel_mems = [m for m in memories if is_relevant(m)]
     rel_turns = [t for t in turns if is_relevant(t)]
 
-    # Noise-resistance gate: nothing relevant -> empty context.
-    if has_query and not rel_mems and not rel_turns:
+    # ── Response gate (noise resistance) ─────────────────────────────────────
+    # Decoupled from inclusion: respond only if a TURN is clearly relevant
+    # (reliable, wide margin) or a stored fact is a HIGH-confidence match. This
+    # stops a single borderline fact collision from dumping the whole profile on
+    # an off-topic query.
+    def passes(x: dict, cos_gate: float, rer_gate: float) -> bool:
+        return x.get("cosine", 0.0) >= cos_gate or x.get("score", 0.0) >= rer_gate
+
+    gate_passed = (
+        any(passes(t, turn_gate, 0.02) for t in turns)
+        or any(passes(m, memory_gate, 0.05) for m in memories)
+    )
+    if has_query and not gate_passed:
         return "", []
 
     # ── Tier 1: known facts ──────────────────────────────────────────────────

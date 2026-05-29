@@ -21,7 +21,8 @@ ENV UV_COMPILE_BYTECODE=1 \
     FASTEMBED_CACHE_PATH=/opt/models \
     HF_HOME=/opt/models/hf \
     EMBED_MODEL=BAAI/bge-small-en-v1.5 \
-    RERANK_MODEL=Xenova/ms-marco-MiniLM-L-6-v2
+    RERANK_MODEL=Xenova/ms-marco-MiniLM-L-6-v2 \
+    PORT=8080
 
 # 1) Dependencies first (best layer caching). This is a virtual uv project
 #    (no build-system), so syncing deps does not require the source tree.
@@ -37,9 +38,9 @@ COPY src ./src
 
 EXPOSE 8080
 
-# Container-level healthcheck mirrors the eval's readiness probe.
+# Container-level healthcheck mirrors the eval's readiness probe (honors $PORT).
 HEALTHCHECK --interval=5s --timeout=3s --start-period=20s --retries=12 \
-    CMD curl -sf http://localhost:8080/health || exit 1
+    CMD curl -sf http://localhost:${PORT:-8080}/health || exit 1
 
-CMD ["uv", "run", "--no-dev", "uvicorn", "memory_service.main:app", \
-     "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+# Shell form so $PORT is expanded at runtime (defaults to 8080).
+CMD uv run --no-dev uvicorn memory_service.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1

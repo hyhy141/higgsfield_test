@@ -109,25 +109,25 @@ Return: {"memories": [ <memory>, ... ]}  (empty list if nothing durable).
 
 Each <memory> has:
   type        one of: fact | preference | opinion | event
-  key         a canonical, dot-separated, snake_case topic id. The SAME real-world
-              attribute MUST always get the SAME key, so later updates can be
-              detected. Use this namespace (extend it consistently when needed):
-                identity/profile: name.full, name.first, age, gender, nationality
-                work:   employment.company, employment.role, employment.status,
-                        employment.industry, occupation
-                place:  location.city, location.country, location.region,
-                        location.hometown, residence.type
-                people: family.spouse, family.partner, family.child,
-                        family.sibling, family.parent, relationship.status
-                pets:   pet.dog, pet.cat, pet.<species>
-                diet:   diet.restriction, diet.allergy
-                prefs:  preference.<topic>            (e.g. preference.communication_style)
-                views:  opinion.<topic>               (e.g. opinion.typescript)
-                skills: skill.<tech>, language.spoken
-                misc:   goal.<topic>, project.<name>, event.<slug>
-  value       a concise, self-contained statement a human can read, e.g.
-              "Works at Notion as a Product Manager", "Lives in Berlin",
-              "Has a dog named Biscuit", "Allergic to shellfish",
+  key         a canonical, dot-separated, snake_case topic id, chosen so the SAME
+              real-world attribute ALWAYS maps to the SAME key (that is how an
+              update is detected). Use these exact key patterns (keep the prefix;
+              the words below are KEYS, not categories):
+                name.full, age, gender, nationality,
+                employment.company, employment.role, employment.status, occupation,
+                location.city, location.country, location.hometown,
+                family.spouse, family.partner, family.child, family.sibling,
+                relationship.status,
+                pet.dog, pet.cat, pet.<species>,
+                diet.restriction, diet.allergy,
+                preference.<topic>  (e.g. preference.communication_style),
+                opinion.<topic>     (e.g. opinion.typescript),
+                skill.<tech>, language.spoken,
+                goal.<topic>, project.<name>, event.<slug>
+  value       a concise, COMPLETE, standalone statement a human can read — never
+              a bare entity name. Write "Works at Notion as a Product Manager"
+              (NOT "Notion"), "Lives in Berlin" (NOT "Berlin" or "near a park"),
+              "Has a dog named Biscuit", "Allergic to shellfish", "Is vegetarian",
               "Prefers concise, direct answers".
   subject     "user" for the user; otherwise the person/entity name.
   entity      for set-valued keys (pets, allergies, skills, children, opinions),
@@ -147,13 +147,19 @@ Each <memory> has:
 Rules:
   - Extract IMPLICIT facts: "walking Biscuit this morning" -> pet.dog,
     value "Has a dog named Biscuit", entity "Biscuit".
-  - A move like "moved to Berlin from NYC" yields BOTH location.city = Berlin
-    (cardinality single) AND an event.move "Moved from NYC to Berlin".
+  - location.city: ONLY a named city/town the user actually lives in, value
+    "Lives in <City>". Never infer location from incidental scenery (a park, an
+    office, a cafe). If no real place is named, emit nothing for location.
+  - A move like "moved to Berlin from NYC" yields BOTH location.city = "Lives in
+    Berlin" (cardinality single) AND an event.move "Moved from NYC to Berlin".
+  - `event` is ONLY for significant, dated life events (a move, a job change, a
+    trip, a milestone). NEVER create events for routine activity (walking the
+    dog, a standup, lunch, a commute).
   - Capture corrections and updates as new memories with is_correction set and
     the corrected value; do not try to delete anything yourself.
   - Do NOT extract the assistant's statements, generic chit-chat, or transient
     task state. Only durable knowledge about the user and their world.
-  - Prefer fewer, higher-quality memories over many noisy ones.
+  - Prefer 3-6 high-signal memories per turn over many noisy ones; skip trivia.
 """
 
 
