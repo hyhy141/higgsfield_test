@@ -105,7 +105,6 @@ def assemble(
     chosen.sort(key=_priority, reverse=True)
 
     # ── Tier 2: opinions/events + other-session relevant turns ───────────────
-    cur_session = gathered.get("session_id")
     earlier_mems = [m for m in rel_mems if m["type"] in ("opinion", "event")]
     earlier_mems.sort(key=lambda m: m.get("score", 0.0), reverse=True)
     other_turns = [t for t in rel_turns]

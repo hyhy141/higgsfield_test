@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -70,10 +70,17 @@ def require_auth(authorization: str | None = Header(default=None)) -> None:
 
 @app.middleware("http")
 async def guards(request: Request, call_next):
-    # Oversized payload guard (cheap Content-Length check before reading body).
+    # Oversized payload guard. We drain the body before replying 413 so the
+    # client's in-flight upload completes and receives a clean response instead
+    # of a broken pipe — while still skipping the expensive parse/extract/embed
+    # pipeline for a payload we're rejecting.
     settings = get_settings()
     cl = request.headers.get("content-length")
     if cl and cl.isdigit() and int(cl) > settings.max_payload_bytes:
+        try:
+            await request.body()
+        except Exception:  # noqa: BLE001
+            pass
         return JSONResponse(status_code=413, content={"detail": "payload too large"})
     try:
         return await call_next(request)
@@ -133,9 +140,14 @@ def health() -> dict:
 def post_turn(req: TurnRequest) -> TurnResponse:
     settings = get_settings()
     messages = [m.model_dump() for m in req.messages[: settings.max_messages_per_turn]]
-    for m in messages:  # clamp pathological message sizes (resilience)
-        if isinstance(m.get("content"), str) and len(m["content"]) > settings.max_message_chars:
-            m["content"] = m["content"][: settings.max_message_chars]
+    for m in messages:  # resilience: clamp size + strip chars Postgres text rejects
+        content = m.get("content")
+        if isinstance(content, str):
+            if "\x00" in content:
+                content = content.replace("\x00", "")
+            if len(content) > settings.max_message_chars:
+                content = content[: settings.max_message_chars]
+            m["content"] = content
 
     text_repr = _render_turn(messages)
     ts = _normalize_ts(req.timestamp)

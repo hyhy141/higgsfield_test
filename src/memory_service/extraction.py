@@ -41,7 +41,7 @@ class Candidate:
     temporal: str = "current"
     attrs: dict = field(default_factory=dict)
 
-    def normalized(self) -> "Candidate":
+    def normalized(self) -> Candidate:
         self.type = normalize_type(self.type)
         self.key = normalize_key(self.key)
         if self.cardinality not in ("single", "multi"):
