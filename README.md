@@ -274,6 +274,9 @@ rule extractor keeps the service fully functional without an LLM.
 
 - **Async throughput.** Sync handlers + threadpool are simpler and correct for "a few
   concurrent sessions"; not tuned for high QPS.
+- **Horizontal scale (mentioned, not built — per §12).** The app process is stateless
+  (all state lives in Postgres), so it *could* run as multiple replicas behind a load
+  balancer against one Postgres. I did not build or prove this — out of scope.
 - **Opinion-arc synthesis** (see §5) and deep multi-hop graph traversal beyond
   user-scoped grounding + query decomposition.
 - **Multilingual.** English FTS config + an English embedding model.

@@ -57,33 +57,55 @@ class Candidate:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 def extract(messages: list[dict], timestamp: str | None, settings: Settings) -> tuple[list[Candidate], str]:
-    """Return (candidates, method). Never raises on extraction problems."""
+    """Return (candidates, method). Never raises on extraction problems.
+
+    Strategy: the LLM engine is primary (it catches implicit facts and corrections);
+    the deterministic rule engine runs alongside it and BACKFILLS only the canonical
+    keys the LLM did not produce for this turn. This makes explicit facts robust —
+    e.g. a small model often logs a move as an `event` but forgets the resulting
+    `location.city`; the rule engine reliably supplies it. With no LLM key, the rule
+    engine is the sole extractor.
+    """
     method = "rules"
-    candidates: list[Candidate] = []
+    llm_cands: list[Candidate] = []
+    llm_ok = False
     if settings.resolved_provider in ("anthropic", "openai") and provider_available(settings):
         try:
-            candidates = _llm_extract(messages, timestamp, settings)
+            llm_cands = _llm_extract(messages, timestamp, settings)
+            llm_ok = True
             method = "llm"
         except LLMError as exc:
-            log.warning("LLM extraction failed, falling back to rules: %s", exc)
-            candidates = []
+            log.warning("LLM extraction failed, using rules: %s", exc)
             method = "rules(llm-failed)"
         except Exception as exc:  # noqa: BLE001 - never let extraction crash /turns
-            log.warning("LLM extraction error, falling back to rules: %s", exc)
-            candidates = []
+            log.warning("LLM extraction error, using rules: %s", exc)
             method = "rules(llm-error)"
-    if not candidates:
-        candidates = _rule_extract(messages)
-        if method == "rules":
-            method = "rules"
-        else:
-            method = method + "+rules"
-    # Normalize + drop empties.
-    out = []
-    for c in candidates:
+
+    rule_cands = _rule_extract(messages)
+    for c in llm_cands:
         c.normalized()
-        if c.value:
-            out.append(c)
+    for c in rule_cands:
+        c.normalized()
+
+    if llm_ok:
+        # Backfill rule candidates the LLM didn't cover. Single-valued keys: add
+        # only if the LLM produced no value for that key (don't fight its value).
+        # Multi-valued keys (allergies, pets, skills): always add — they coexist
+        # and the store dedups by entity, so e.g. a rule "allergic to tree nuts"
+        # survives even when the LLM only emitted a peanut *retraction* on the same
+        # key.
+        llm_single_keys = {(c.subject, c.key) for c in llm_cands if c.cardinality == "single"}
+        backfill = [
+            rc for rc in rule_cands
+            if rc.cardinality == "multi" or (rc.subject, rc.key) not in llm_single_keys
+        ]
+        candidates = llm_cands + backfill
+        if backfill:
+            method = "llm+rules"
+    else:
+        candidates = rule_cands
+
+    out = [c for c in candidates if c.value]
     out = _resolve_conflicts(out)
     return out, method
 

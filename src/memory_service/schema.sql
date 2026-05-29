@@ -57,9 +57,6 @@ CREATE TABLE IF NOT EXISTS memories (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Defensive, idempotent migration for pre-existing tables.
-ALTER TABLE memories ADD COLUMN IF NOT EXISTS observed_at TIMESTAMPTZ;
-
 CREATE INDEX IF NOT EXISTS memories_user_active_idx  ON memories (user_id, active);
 CREATE INDEX IF NOT EXISTS memories_user_key_idx     ON memories (user_id, key, subject, active);
 CREATE INDEX IF NOT EXISTS memories_session_idx      ON memories (session_id);

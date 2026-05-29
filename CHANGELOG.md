@@ -185,3 +185,41 @@ mandatory `env_file`) so it boots with no `.env`; added env-behavior tests
 occasionally emits a bare value); a stronger model or a post-extraction normalizer
 would tighten it. The "Go-the-language vs Go-the-game" collision is the residual
 hard case for a 384-dim embedder.
+
+---
+
+## v0.8 — Rule-backfill merge fixes multi-hop + corrections on the LLM path
+
+**What changed:** A full OpenAI validation pass (running each fixture 5×) exposed two
+*intermittent* failures that only the variance of a real LLM surfaces:
+
+1. **Multi-hop flaked.** "What city does the owner of the dog named Biscuit live in?"
+   sometimes missed Berlin — because gpt-4o-mini occasionally logged the move only as
+   an `event` ("Moved from New York to Berlin") and **omitted the `location.city`
+   fact**, so the city wasn't a first-class memory.
+2. **Corrections were half-applied.** "...not peanuts — I'm allergic to tree nuts"
+   correctly *retracted* peanuts but the **tree-nuts memory went missing**: my merge
+   backfilled rule candidates by key, and since the LLM already emitted a
+   `diet.allergy` candidate (the peanut retraction), the rule's tree-nuts add on the
+   same multi-valued key was dropped.
+
+**The fix — smarter LLM+rule merge:** the LLM stays primary, but the deterministic
+rule engine now runs *alongside* it and backfills: single-valued keys only when the
+LLM produced nothing for them (don't fight its value), **multi-valued keys always**
+(they coexist; the store dedups by entity). So a move always yields a `location.city`
+even when the model only logged an event, and an allergy correction keeps both the
+retraction *and* the new value.
+
+**Result:** OpenAI-path self-eval went from a flaky 9–10/10 to **11/11 stable** (5×
+back to back). Verified end-to-end on the LLM path: fact evolution (Stripe→Notion,
+old superseded + history kept), corrections (peanuts→tree nuts: tree-nuts active,
+peanuts inactive), implicit facts ("walking Biscuit" → `pet.dog`). Rule-only path
+also 11/11. Added an explicit **correction** scenario to the fixture (Boston→Seattle).
+
+**Also:** removed an idempotent `ALTER TABLE` from the schema — the column lives in
+`CREATE TABLE`, so the schema is now a single clean version (aligns with §12 "no
+migration story").
+
+**Next:** Value canonicalization still drifts slightly on a small model; a stronger
+extractor or a normalizer pass would tighten phrasing. The design is otherwise
+feature-complete against the contract and the §4 hard problems.

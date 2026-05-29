@@ -66,6 +66,14 @@
       "expect_empty": true
     },
     {
+      "id": "correction_location",
+      "category": "fact_evolution",
+      "query": "Which city does this user currently live in?",
+      "user_id": "u_carol",
+      "session_id": "probe_carol",
+      "expect_any": ["Seattle"]
+    },
+    {
       "id": "bob_live_isolation",
       "category": "cross_session_scoping",
       "query": "Where does the user live?",

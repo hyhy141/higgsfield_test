@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
     db.close_pool()
 
 
-app = FastAPI(title="memory-service", version="0.7.0", lifespan=lifespan)
+app = FastAPI(title="memory-service", version="0.8.0", lifespan=lifespan)
 
 
 # ── Auth + payload guards ────────────────────────────────────────────────────
