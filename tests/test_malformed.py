@@ -8,7 +8,11 @@ import json
 import urllib.error
 import urllib.request
 
+import pytest
+
 from . import harness
+
+pytestmark = pytest.mark.usefixtures("require_service")
 
 
 def _raw_post(path: str, raw: bytes, content_type: str = "application/json"):

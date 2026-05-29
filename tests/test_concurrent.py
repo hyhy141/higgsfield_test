@@ -6,7 +6,11 @@ from __future__ import annotations
 
 import uuid
 
+import pytest
+
 from . import harness
+
+pytestmark = pytest.mark.usefixtures("require_service")
 
 
 def test_two_users_do_not_bleed(cleanup_users):

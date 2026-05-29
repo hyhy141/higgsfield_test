@@ -10,7 +10,11 @@ Run verbosely to see the full report:  pytest -s tests/test_recall_quality.py
 
 from __future__ import annotations
 
+import pytest
+
 from . import harness
+
+pytestmark = pytest.mark.usefixtures("require_service")
 
 
 def test_recall_quality_fixture():

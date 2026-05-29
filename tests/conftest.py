@@ -15,8 +15,10 @@ import pytest
 from . import harness
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _require_service():
+@pytest.fixture(scope="session")
+def require_service():
+    """HTTP test modules opt into this via `pytestmark = usefixtures(...)`. Pure
+    unit tests don't, so they run with no service up."""
     try:
         status, _ = harness.health()
     except Exception as exc:  # noqa: BLE001

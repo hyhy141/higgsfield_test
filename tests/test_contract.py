@@ -3,7 +3,11 @@ and a write is immediately readable (no eventual consistency)."""
 
 from __future__ import annotations
 
+import pytest
+
 from . import harness
+
+pytestmark = pytest.mark.usefixtures("require_service")
 
 
 def test_health():
