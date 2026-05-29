@@ -1,6 +1,6 @@
 [project]
 name = "memory-service"
-version = "0.6.0"
+version = "0.7.0"
 description = "Memory service for an AI agent — ingest turns, extract structured knowledge, answer recall queries."
 requires-python = ">=3.12"
 dependencies = [

@@ -4,4 +4,4 @@ Ingests conversation turns, extracts structured knowledge, and answers recall
 queries that decide what context the agent sees on its next turn.
 """
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"

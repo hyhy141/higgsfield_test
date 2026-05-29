@@ -140,3 +140,48 @@ stance and history are preserved, but the gradual trajectory isn't synthesized.
 The reranker's low absolute scale means the gate leans on cosine; a reranker
 fine-tuned on short facts would let me tighten it. Rule extractor misses implicit
 facts ("walking Biscuit" → has a dog) that the LLM engine catches.
+
+---
+
+## v0.7 — Validated the OpenAI path; redesigned the noise gate around it
+
+**What changed:** Ran extraction through the real LLM path (OpenAI gpt-4o-mini)
+for the first time, and three things fell out:
+
+1. **The LLM extractor is excellent at implicit facts** the rule engine can't do.
+   From "spent the morning walking Biscuit before my standup at Vercel" it inferred
+   `pet.dog = Has a dog named Biscuit` *and* `employment.company = Works at Vercel`.
+2. **It also exposed extraction-quality bugs the rules never could:** bare values
+   ("Notion" instead of "Works at Notion"), a mis-keyed `location.city = "Lives near
+   a big park"` that *superseded* the real city, `views.typescript`/`pets.dog` (the
+   model read my taxonomy's category labels as key prefixes), and trivial
+   `event.walk`/`event.standup` noise. Hardened the prompt: complete canonical
+   values, `location.city` only for real cities, `event` only for significant
+   happenings, and a **flat** canonical key list (no category labels to misread).
+3. **The noise gate leaked on the OpenAI path.** "What is the user's favorite
+   Pokemon and preferred chess opening?" returned the full profile. Two causes: the
+   words "preferred"/"favorite" pull toward stored preferences, and "Proficient in
+   **Go**" (the language) collides with "chess/**Go**" (the game). Short-fact cosine
+   is knife-edge here — on-topic "Lives in Berlin" = 0.616 vs the noise collision
+   0.603 — and LLM extraction *varies* run to run, so the gate oscillated 9/10↔10/10.
+
+**Why the fix works:** I measured **turn-level** cosine and it separates cleanly —
+on-topic queries hit 0.665–0.704 against the user's turns, noise hits **0.563**: a
+~0.10 margin where facts give ~0.013. So I **decoupled the response gate from the
+inclusion bar**: respond only if a *turn* clears 0.62 (reliable) or a fact is a
+*high-confidence* match (cosine ≥ 0.66); the lower 0.61 bar now only ranks *which*
+facts to show. A single borderline fact collision can no longer trigger a dump.
+
+**Result:** OpenAI-path self-eval went from a flaky 9/10 to **10/10 stable across
+repeated runs** (verified 4× back to back). Rule-path self-eval stays 10/10.
+Implicit-fact extraction and supersession both confirmed on the LLM path.
+
+**Also:** centralized env handling (`OPENAI_MODEL`, `PORT`, `MAX_TURN_BYTES`,
+`LOG_LEVEL`); docker-compose now uses `${VAR:-default}` for every setting (no
+mandatory `env_file`) so it boots with no `.env`; added env-behavior tests
+(provider resolution, optional bearer auth, `.env.example` completeness).
+
+**Next:** Value canonicalization still drifts on a small model (gpt-4o-mini
+occasionally emits a bare value); a stronger model or a post-extraction normalizer
+would tighten it. The "Go-the-language vs Go-the-game" collision is the residual
+hard case for a 384-dim embedder.
