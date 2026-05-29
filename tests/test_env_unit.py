@@ -3,11 +3,22 @@ bearer-auth dependency. In-process, no running service required."""
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 from fastapi import HTTPException
 
 from memory_service import main
 from memory_service.config import Settings
+
+
+def test_env_example_documents_all_vars():
+    p = pathlib.Path(__file__).resolve().parent.parent / ".env.example"
+    assert p.exists(), ".env.example must be committed as documentation"
+    text = p.read_text(encoding="utf-8")
+    for var in ["OPENAI_API_KEY", "OPENAI_MODEL", "MEMORY_AUTH_TOKEN", "DATABASE_URL",
+                "PORT", "LOG_LEVEL", "MAX_TURN_BYTES"]:
+        assert var in text, f"{var} missing from .env.example"
 
 
 # ── Provider / OpenAI-optional behavior ──────────────────────────────────────

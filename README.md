@@ -352,8 +352,48 @@ isolation), and restart persistence. Tests target `MEMORY_BASE_URL`
   `EXTRACTION_MODEL`. If the model/key is invalid, the service logs a warning and uses
   the rule engine — it never hard-fails a request.
 
-All settings and keys are documented in [`.env.example`](.env.example); every value
-has a safe default.
+### Environment variables
+
+[`.env.example`](.env.example) is committed **as documentation**; a real `.env` is
+**git-ignored and must never be committed**. The service runs with **no `.env` at
+all** — `docker compose up -d` works on a clean machine because compose supplies
+`${VAR:-default}` for every setting (no mandatory `env_file`).
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | _(empty)_ | If set, enables OpenAI extraction. If empty, **rule-based** extraction is used. |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model, used only when `OPENAI_API_KEY` is set. |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Alternative LLM provider (auto-selected if set). |
+| `EXTRACTION_PROVIDER` | `auto` | `auto` \| `openai` \| `anthropic` \| `rules`. |
+| `MEMORY_AUTH_TOKEN` | _(empty)_ | If set, all endpoints except `GET /health` require `Authorization: Bearer <token>`. If empty, auth is disabled. |
+| `DATABASE_URL` | `postgresql://memory:memory@db:5432/memory` | Backing store; compose points it at the bundled Postgres. |
+| `PORT` | `8080` | HTTP port. |
+| `LOG_LEVEL` | `info` | Log level. |
+| `MAX_TURN_BYTES` | `200000` | Max `POST /turns` body size; larger → `413`. |
+
+**OpenAI is optional and only improves extraction/reranking** — the service is fully
+functional without it. Enable it locally:
+
+```bash
+cp .env.example .env
+# then edit .env:
+OPENAI_API_KEY=sk-...
+```
+
+If `OpenAI` is configured but a request fails, the failure is logged and that turn
+falls back to the rule-based engine — the service never crashes.
+
+**Enable auth** by setting a token, then send it on every call:
+
+```bash
+# .env
+MEMORY_AUTH_TOKEN=some-secret-token
+# requests:
+curl -H "Authorization: Bearer some-secret-token" http://localhost:8080/recall ...
+```
+
+All settings have safe defaults; the centralized config layer is
+[`src/memory_service/config.py`](src/memory_service/config.py).
 
 ---
 
