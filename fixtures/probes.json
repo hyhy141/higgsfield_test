@@ -1,0 +1,87 @@
+{
+  "description": "Probe queries run against /recall after ingesting conversations.json. `expect_any` = at least one of these substrings (case-insensitive) must appear in the returned context (counts as the expected fact being recalled). `expect_absent` = none of these may appear. `expect_empty` = context must be empty (noise resistance). Each entry maps to one of the eval categories.",
+  "probes": [
+    {
+      "id": "live_current",
+      "category": "recall",
+      "query": "Where does this user live?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["Berlin"]
+    },
+    {
+      "id": "work_superseded",
+      "category": "fact_evolution",
+      "query": "Where does the user work now and what's their role?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["Notion"]
+    },
+    {
+      "id": "dog_name",
+      "category": "recall",
+      "query": "What is the user's dog's name?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["Biscuit"]
+    },
+    {
+      "id": "diet",
+      "category": "recall",
+      "query": "What dietary restrictions does the user have?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["vegetarian", "shellfish"]
+    },
+    {
+      "id": "lang_pref",
+      "category": "recall",
+      "query": "What programming language does the user enjoy?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["TypeScript"]
+    },
+    {
+      "id": "answer_style",
+      "category": "recall",
+      "query": "How does the user like their answers formatted?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["concise", "direct"]
+    },
+    {
+      "id": "multi_hop_city_of_dog_owner",
+      "category": "multi_hop",
+      "query": "What city does the owner of the dog named Biscuit live in?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_any": ["Berlin"]
+    },
+    {
+      "id": "noise_pokemon",
+      "category": "noise_resistance",
+      "query": "What is the user's favorite Pokemon and preferred chess opening?",
+      "user_id": "u_alice",
+      "session_id": "probe_alice",
+      "expect_empty": true
+    },
+    {
+      "id": "bob_live_isolation",
+      "category": "cross_session_scoping",
+      "query": "Where does the user live?",
+      "user_id": "u_bob",
+      "session_id": "probe_bob",
+      "expect_any": ["Tokyo"],
+      "expect_absent": ["Berlin", "Notion", "Biscuit"]
+    },
+    {
+      "id": "bob_work_isolation",
+      "category": "cross_session_scoping",
+      "query": "Who does the user work for?",
+      "user_id": "u_bob",
+      "session_id": "probe_bob",
+      "expect_any": ["Sony"],
+      "expect_absent": ["Stripe", "Notion"]
+    }
+  ]
+}

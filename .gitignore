@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local env (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Local model cache (baked into the image at build time, not committed)
+.fastembed_cache/
+models/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Logs
+*.log
