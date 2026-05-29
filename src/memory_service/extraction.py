@@ -297,8 +297,13 @@ def _rules_for_sentence(sent: str) -> list[Candidate]:
             r"\bi (?:just |recently |now |currently )?(?:work|started working|started|got a job|joined|"
             r"am working|['’]m working|began)(?: a job)?(?: at| for| with)\s+(.+)",
         )
+        if not company:
+            # Compound sentence ("...and work at Notion") — no "I" before "work".
+            c2 = _after(sent, r"\bwork(?:ing)? (?:at|for) (.+)")
+            if c2 and c2.lower() not in _NON_EMPLOYERS:
+                company = c2
         if company:
-            out.append(Candidate("fact", "employment.company", f"Works at {company}", 0.85))
+            out.append(Candidate("fact", "employment.company", f"Works at {company}", 0.82))
         else:
             # "I'm (now) at <Company>" — guarded against places (home, gym, ...).
             m_at = re.search(r"\bi(?:['’]m| am)(?: now| currently)? (?:working |back )?at (.+)", sent, _I)
